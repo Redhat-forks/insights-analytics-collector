@@ -51,7 +51,7 @@ def test_slices_by_date(collector):
             assert "./csv_one_day_slicing_1.csv" in files.keys()
 
             lines = files["./csv_one_day_slicing_1.csv"].readlines()
-            _header = lines.pop(0)
+            lines.pop(0)
             row = decode_csv_line(lines[0])
 
             csv_since = datetime.datetime(

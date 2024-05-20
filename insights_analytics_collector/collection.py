@@ -36,7 +36,8 @@ class Collection:
         self.gathering_started_at = None
         self.gathering_finished_at = None
         self.gathering_successful = None
-        self.last_gathered_entry = self.collector.last_gathered_entry_for(self.key)
+        self.last_gathered_entry = self.collector.last_gathered_entry_for(
+            self.key)
 
     @abstractmethod
     def add_to_tar(self, tar):
@@ -67,7 +68,10 @@ class Collection:
 
             self.gathering_successful = True
         except Exception as e:
-            self.logger.exception(f"Could not generate metric {self.filename}: {e}")
+            self.logger.exception(
+                f"Could not generate metric "  # nopep8
+                f"{self.filename}: {e}"
+            )  # nopep8
             self.gathering_successful = False
         finally:
             self._set_gathering_finished()
@@ -87,7 +91,8 @@ class Collection:
         # Or it can force full table sync if interval is given
         if self.fnc_slicing:
             if self.full_sync_enabled:
-                slices = self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
+                slices = self.fnc_slicing(
+                    self.key, last_gather, full_sync_enabled=True)
             else:
                 slices = self.fnc_slicing(
                     self.key, last_gather, since=since, until=until
@@ -119,7 +124,9 @@ class Collection:
 
             if self.full_sync_enabled:
                 self._update_last_gathered_key(
-                    updates_dict, f"{self.key}_full", self.gathering_finished_at
+                    updates_dict,  # nopep8
+                    f"{self.key}_full",  # nopep8
+                    self.gathering_finished_at,  # nopep8
                 )
         else:
             # collections are ordered by time slices.
@@ -141,7 +148,8 @@ class Collection:
         if not interval_days:
             return False
 
-        last_full_sync = self.collector.last_gathered_entry_for(f"{self.key}_full")
+        last_full_sync = self.collector.last_gathered_entry_for(
+            f"{self.key}_full")
         return not last_full_sync or last_full_sync < now() - timedelta(
             days=interval_days
         )

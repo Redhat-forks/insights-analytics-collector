@@ -3,9 +3,8 @@ import json
 import os
 import pathlib
 import tarfile
+from uploader.factory import get_uploader
 from abc import abstractmethod
-
-import requests
 
 
 class Package:
@@ -24,10 +23,12 @@ class Package:
     # i.e. "application/vnd.redhat.tower.tower_payload+tgz"
     PAYLOAD_CONTENT_TYPE = "application/vnd.redhat.TODO+tgz"
 
-    SHIPPING_AUTH_USERPASS = "user-pass"
+    SHIPPING_AUTH_USERPASS = "user-pass"  # Development mode only
     SHIPPING_AUTH_S3_USERPASS = "user-pass-s3"
     SHIPPING_AUTH_IDENTITY = "x-rh-identity"  # Development mode only
     SHIPPING_AUTH_CERTIFICATES = "mutual-tls"  # Mutual TLS
+    SHIPPING_AUTH_OAUTH_PAT = "service-account"
+    SHIPPING_AUTH_OAUTH_PKCE = "service-account"
 
     DEFAULT_RHSM_CERT_FILE = "/etc/pki/consumer/cert.pem"
     DEFAULT_RHSM_KEY_FILE = "/etc/pki/consumer/key.pem"
@@ -84,12 +85,14 @@ class Package:
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error("Insights for Ansible Automation Platform TAR not found")
+            self.logger.error(
+                "Insights for Ansible Automation Platform TAR not found")
             return False
 
         if not os.path.exists(self.tar_path):
             self.logger.error(
-                f"Insights for Ansible Automation Platform TAR {self.tar_path} not found"
+                f"Insights for Ansible Automation Platform TAR "
+                f"{self.tar_path} not found"
             )
             return False
 
@@ -153,7 +156,8 @@ class Package:
                 self.tar_path = f.name
             return True
         except Exception as e:
-            self.logger.exception(f"Failed to write analytics archive file: {e}")
+            self.logger.exception(
+                f"Failed to write analytics archive file: {e}")
             return False
 
     def ship(self):
@@ -167,29 +171,27 @@ class Package:
         self.logger.debug(f"shipping analytics file: {self.tar_path}")
 
         with open(self.tar_path, "rb") as f:
-            files = {
-                "file": (
-                    os.path.basename(self.tar_path),
-                    f,
-                    self._payload_content_type(),
-                )
-            }
-            s = requests.Session()
-            if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
-                # as a single file (containing the private key and the certificate) or
-                # as a tuple of both files paths (cert_file, keyfile)
-                s.cert = self._get_client_certificates()
+            uploader = get_uploader(
+                self.shipping_auth_mode(),
+                url=self.get_ingress_url(),
+                files={
+                    "file": (
+                        os.path.basename(self.tar_path),
+                        f,
+                        self._payload_content_type(),
+                    )
+                },
+                username=self._get_rh_user(),
+                password=self._get_rh_password(),
+                cert_path=self.CERT_PATH,
+                cert=self._get_client_certificates(),
+                xrhidentity=self._get_x_rh_identity(),
+                headers=self._get_http_request_headers(),
+                proxy=self.get_proxy_url(),
+            )
 
-            s.headers = self._get_http_request_headers()
-            s.headers.pop("Content-Type")
-
-            if self.shipping_auth_mode() == self.SHIPPING_AUTH_IDENTITY:
-                s.headers["x-rh-identity"] = self._get_x_rh_identity()
-
-            url = self.get_ingress_url()
-            self.shipping_successful = self._send_data(url, files, s)
-
-        return self.shipping_successful
+            uploader.headers.pop("Content-Type")
+            return uploader.send_data()
 
     def shipping_auth_mode(self):
         return self.SHIPPING_AUTH_USERPASS
@@ -213,32 +215,6 @@ class Package:
                 f"Could not generate metric {collection.filename}: {e}"
             )
             return None
-
-    def _send_data(self, url, files, session):
-        if self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
-            response = session.post(
-                url,
-                files=files,
-                verify=self.CERT_PATH,
-                auth=(self._get_rh_user(), self._get_rh_password()),
-                headers=session.headers,
-                timeout=(31, 31),
-            )
-        else:
-            response = session.post(
-                url, files=files, headers=session.headers, timeout=(31, 31)
-            )
-
-        # Accept 2XX status_codes
-        if response.status_code >= 300:
-            self.logger.error(
-                "Upload failed with status {}, {}".format(
-                    response.status_code, response.text
-                )
-            )
-            return False
-
-        return True
 
     def _config_to_tar(self, tar):
         if self.collector.collections["config"] is None:
@@ -310,7 +286,8 @@ class Package:
             self.manifest.add_collection(self.data_collection_status)
         except Exception as e:
             self.logger.exception(
-                f"Could not generate {self.data_collection_status.filename}: {e}"
+                f"Could not generate "  # nopep8
+                f"{self.data_collection_status.filename}: {e}"  # nopep8
             )
 
     def _manifest_to_tar(self, tar):
@@ -319,7 +296,10 @@ class Package:
             self.manifest.add_to_tar(tar)
             self.add_collection(self.manifest)
         except Exception as e:
-            self.logger.exception(f"Could not generate {self.manifest.filename}: {e}")
+            self.logger.exception(
+                f"Could not generate "  # nopep8
+                f"{self.manifest.filename}: {e}"
+            )  # nopep8
 
     def _payload_content_type(self):
         return self.PAYLOAD_CONTENT_TYPE

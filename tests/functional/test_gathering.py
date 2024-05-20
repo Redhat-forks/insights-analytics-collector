@@ -24,7 +24,8 @@ def collector(mocker):
 def test_missing_config(mocker, collector):
     mock_logger = mocker.patch.object(collector, "logger")
 
-    tgz_files = collector.gather(subset=["json_collection_1", "json_collection_2"])
+    tgz_files = collector.gather(
+        subset=["json_collection_1", "json_collection_2"])
 
     assert tgz_files is None
     mock_logger.log.assert_called_with(
@@ -49,15 +50,18 @@ def test_json_collections(collector):
         assert "./json_collection_2.json" in files.keys()
 
         assert json.loads(files["./config.json"].read()) == {"version": "1.0"}
-        assert json.loads(files["./json_collection_1.json"].read()) == {"json1": "True"}
-        assert json.loads(files["./json_collection_2.json"].read()) == {"json2": "True"}
+        assert json.loads(
+            files["./json_collection_1.json"].read()) == {"json1": "True"}
+        assert json.loads(
+            files["./json_collection_2.json"].read()) == {"json2": "True"}
 
     collector._gather_cleanup()
 
 
 def test_small_csvs(collector):
     tgz_files = collector.gather(
-        subset=["config", "csv_collection_1", "csv_collection_2", "csv_collection_3"]
+        subset=["config", "csv_collection_1",
+                "csv_collection_2", "csv_collection_3"]
     )
 
     assert len(tgz_files) == 1
@@ -133,7 +137,8 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
     mocker.patch("tests.classes.package.Package.MAX_DATA_SIZE", 1000)
 
     tgz_files = collector.gather(
-        subset=["config", "big_table_2", "csv_collection_1", "csv_collection_2"]
+        subset=["config", "big_table_2",
+                "csv_collection_1", "csv_collection_2"]
     )
 
     assert len(tgz_files) == 3

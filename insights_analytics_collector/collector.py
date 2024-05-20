@@ -191,12 +191,14 @@ class Collector:
         if until is not None and until > _now:
             until = _now
             self.logger.warning(
-                f"End of the collection interval is in the future, setting to {_now}."
+                f"End of the collection interval is in the future,"
+                f" setting to {_now}."
             )
         if since is not None and since > _now:
             since = _now
             self.logger.warning(
-                f"Start of the collection interval is in the future, setting to {_now}."
+                f"Start of the collection interval is in the "
+                f"future, setting to {_now}."
             )
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
@@ -207,7 +209,8 @@ class Collector:
                 if until > since + timedelta(weeks=4):
                     until = since + timedelta(weeks=4)
                     self.logger.warning(
-                        f"End of the collection interval is greater than 4 weeks from start, setting end to {until}."
+                        f"End of the collection interval is greater "  # nopep8
+                        f"than 4 weeks from start, setting end to {until}."  # nopep8
                     )
             else:  # until is None
                 until = min(since + timedelta(weeks=4), _now)
@@ -228,14 +231,16 @@ class Collector:
         if since is not None and since < horizon:
             since = horizon
             self.logger.warning(
-                f"Start of the collection interval is more than 4 weeks prior to {until}, setting to {horizon}."
+                f"Start of the collection interval is "  # nopep8
+                f"more than 4 weeks prior to {until}, setting to {horizon}."  # nopep8
             )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
             self.logger.warning(
-                f"Last analytics run was more than 4 weeks prior to {until}, using {horizon} instead."
+                f"Last analytics run was more than 4 weeks prior to "  # nopep8
+                f"{until}, using {horizon} instead."  # nopep8
             )
 
         self.gather_since = since
@@ -287,10 +292,12 @@ class Collector:
         TODO: add "always" flag to @register decorator
         """
         if not self.config_present():
-            self.logger.log(self.log_level, "'config' collector data is missing")
+            self.logger.log(
+                self.log_level, "'config' collector data is missing")
             return False
         else:
-            self.collections["config"].gather(self._package_class().max_data_size())
+            self.collections["config"].gather(
+                self._package_class().max_data_size())
             return True
 
     def _gather_json_collections(self):
@@ -338,19 +345,23 @@ class Collector:
             yield True
         else:
             # Build 64-bit integer out of the resource id
-            resource_key = int(hashlib.sha512(key.encode()).hexdigest(), 16) % 2**63
+            resource_key = int(hashlib.sha512(
+                key.encode()).hexdigest(), 16) % 2**63
 
             cursor = connection.cursor()
 
             try:
                 if wait:
-                    cursor.execute("SELECT pg_advisory_lock(%s);", (resource_key,))
+                    cursor.execute(
+                        "SELECT pg_advisory_lock(%s);", (resource_key,))
                 else:
-                    cursor.execute("SELECT pg_try_advisory_lock(%s);", (resource_key,))
+                    cursor.execute(
+                        "SELECT pg_try_advisory_lock(%s);", (resource_key,))
                 acquired = cursor.fetchall()[0][0]
                 yield acquired
             finally:
-                cursor.execute("SELECT pg_advisory_unlock(%s);", (resource_key,))
+                cursor.execute("SELECT pg_advisory_unlock(%s);",
+                               (resource_key,))
                 cursor.close()
 
     def _process_packages(self):
@@ -487,7 +498,8 @@ class Collector:
                     for since, until in collection.slices():
                         collection.since = since
                         collection.until = until
-                        self.collections[collection.data_type].append(collection)
+                        self.collections[collection.data_type].append(
+                            collection)
                         collection = self._create_collection(fnc)
 
     def _create_collection(self, fnc_collecting):
@@ -499,7 +511,10 @@ class Collector:
             collection = self._collection_csv_class()(self, fnc_collecting)
 
         if collection is None:
-            raise RuntimeError(f"Collection of type {data_type} not implemented")
+            raise RuntimeError(
+                f"Collection of type "  # nopep8
+                f"{data_type} not implemented"
+            )  # nopep8
 
         return collection
 

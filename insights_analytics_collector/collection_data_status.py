@@ -28,7 +28,8 @@ class CollectionDataStatus(CollectionCSV):
                 "status",
                 "elapsed",
             ]
-            writer = csv.DictWriter(csvfile, delimiter=",", fieldnames=fieldnames)
+            writer = csv.DictWriter(
+                csvfile, delimiter=",", fieldnames=fieldnames)
             writer.writeheader()
 
             for collection in self.package.collections:

@@ -32,7 +32,8 @@ class CollectionJSON(Collection):
         """Adds JSON data to TAR(tgz) archive"""
         buf = self.target().encode("utf-8")
         self.logger.debug(
-            f"CollectionJSON._add_to_tar: | {self.key}.json | Size: {self.data_size()}"
+            f"CollectionJSON._add_to_tar: | "
+            f"{self.key}.json | Size: {self.data_size()}"
         )
         info = tarfile.TarInfo(f"./{self.filename}")
         info.size = len(buf)
